@@ -1,0 +1,109 @@
+$ grep "$cesta/[^/]*$" "$WEDI_RC" | tac |cut -f1 -d '|'
+
+$ grep "$cesta/[^/]*$" "$WEDI_RC" | sed -n '1!G;h;$p' |cut -f1 -d '|'
+
+cat subor | cut -d '|' -f1 | sort |uniq -c | sort -n | tail -n 1 |rev | cut -f1 -d ' '
+
+grep "/home/imjasojedov/Documents/IOS/projekt1/" "$WEDI_RC" | cut -d '|' -f1 | sort | uniq -c | head -n 1 | rev | cut -d ' ' -f1 | rev
+
+
+
+if [ $# -eq 0 ]; then
+	fullPath=`readlink -f ./`
+	#fileName=`grep "$fullPath" "$WEDI_RC" | cut -f1 -d '|' | awk -F"/" 'NF{ print $NF }'`	
+	
+
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`	
+	edit $EDITOR "$file"
+
+elif [ $# -eq 1 ] && [ -d $1 ]; then
+	directory="$1"
+	fullPath=`readlink -f "$1"`
+	#fileName=`grep "$fullPath" "$WEDI_RC" | cut -f1 -d '|' | awk -F"/" 'NF{ print $NF }'`	
+	echo $fullPath
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`	
+	echo $file
+	edit $EDITOR "$file
+
+
+
+
+#-------------MAIN--------------------
+if [ $# -eq 0 ]; then
+	fullPath=`readlink -f ./`
+	#fileName=`grep "$fullPath" "$WEDI_RC" | cut -f1 -d '|' | awk -F"/" 'NF{ print $NF }'`	
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`	
+	edit $EDITOR "$file"
+elif [ $# -eq 1 ] && [ -f $1 ]; then
+	edit $EDITOR "$1"
+elif [ $# -eq 1 ] && [ -d $1 ]; then
+	fullPath=`readlink -f "$1"`	
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`	
+	edit $EDITOR "$file""
+
+
+
+
+
+
+########################################################
+if [ -n "$3" ]; then
+		fullPath=`readlink -f "$3"`
+	else
+		fullPath=`readlink -f ./`
+	fi
+	
+	#edge=`echo "$2" | tr -d '-'`
+	edge=`echo "$2"`
+	files=`cat "$WEDI_RC" | cut -f1,2 -d '|'  | awk -F"/" 'NF{ print $NF }' | cut -f1 -d '_' | sort | uniq`	
+	dates=`cat "$WEDI_RC" | cut -f2 -d '|'  | awk -F"/" 'NF{ print $NF }' | cut -f1 -d '_' | sort|uniq`
+	
+	for date in $dates
+	do
+		
+		#n_date=`echo "$date" | tr -d '-'`	
+		n_date=`echo "$date"`	
+		if [ $n_date < $edge ]; then 
+			for file in $files; do 
+		    	r_file=`echo "$file"` 
+		        echo "$r_file" 
+    		done 
+		fi
+	done
+
+
+
+
+
+
+##################################
+elif [ $# -eq 3 ] && [ "$1" = "-a" ]; then	
+	if [ -n "$3" ]; then
+		fullPath=`readlink -f "$3"`
+	else
+		fullPath=`readlink -f ./`
+	fi
+	
+	parameterDate=$2;
+	dates=`cat "$WEDI_RC" | cut -f2 -d '|'  | awk -F"/" 'NF{ print $NF }' | cut -f1 -d '_' | sort | uniq`
+	goodDates=""
+
+	for date in $dates
+	do
+		if [[ "$date" > "$parameterDate" ]]; then
+			goodDates+="$date|"
+		fi
+	done
+	#echo $goodDates
+	
+	toPrint=`cat $WEDI_RC| egrep  "$goodDates | {$goodDates::-1}" | cut -f1 -d '|'  | awk -F"/" 'NF{ print $NF }'` 
+	echo $toPrint | tr ' ' '\n' | sort | uniq
+	
+
+
+
+
+
+
+
+

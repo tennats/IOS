@@ -1,0 +1,138 @@
+#!/bin/sh
+#############################################
+#	Author: Igor Mjasojedov, xmjaso00   #
+#	School:	VUT FIT BIT1	            #
+#	Date:	26.03.2018		    #
+#############################################
+
+POSIXLY_CORRECT=yes
+
+#-----------TESTING_REALPATH _utility---------------
+realPathTest=$(realpath . 2> /dev/null)
+realPathTest=$?	
+if [ $realPathTest -eq 127 ]; then
+  echo "ERROR: \"realpath\" utilita nieje dostupna!" >&2
+  exit $realPathTest
+fi
+
+#--------------EDITORY-----------------
+if [ -z "$EDITOR" ]; then
+	if [ -z "$VISUAL" ]; then
+		echo "Premenna EDITOR a VISUAL neboli nastavene!!!" >&2
+		EDITOR=vi
+	else
+		EDITOR=$VISUAL
+	fi
+fi
+
+if [ -z "$WEDI_RC" ]; then 
+   	echo "Premenna WEDI_RC nieje nastavena">&2 
+	exit 42 
+elif [ ! -d "$WEDI_RC" ]; then
+	mkdir -p `dirname $WEDI_RC`
+	touch $WEDI_RC	
+fi
+
+#-------------FUNKCIE------------------
+edit()
+{
+	$1 "$2"
+	exit_code=$?
+	fullPath=`readlink -f "$2"`
+	printf "$2|`date +"%F_%T"`\n" >>$WEDI_RC
+	exit $exit_code
+}
+
+#-------------MAIN--------------------
+if [ $# -eq 0 ]; then
+	fullPath=`readlink -f ./`
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`
+	if [ -n "$file" ]; then
+		edit $EDITOR "$file"
+	else
+		echo "ERROR: V danom subore nebol doposial editovany ziadny subor!" >&2	
+		exit 42
+	fi
+elif [ $# -eq 1 ] && [ -f $1 ]; then
+	fullPath=`readlink -f "$1"`
+	edit $EDITOR "$fullPath"
+elif [ $# -eq 1 ] && [ -d $1 ]; then
+	fullPath=`readlink -f "$1"`	
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | tac | cut -f1 -d '|' | head -n 1`
+	if [ -n "$file" ]; then
+		edit $EDITOR "$file"
+	else
+		echo "ERROR: V danom subore nebol doposial editovany ziadny subor!" >&2	
+		exit 42
+	fi
+	
+elif [ $# -le 2 ] && [ "$1" = "-l" ]; then
+	if [ -n "$2" ]; then
+		fullPath=`readlink -f "$2"`
+	else
+		fullPath=`readlink -f ./`
+	fi
+
+	fileName=`grep "$fullPath/[^/]*$" "$WEDI_RC" | cut -f1 -d '|'  | awk -F"/" 'NF{ print $NF }'`	
+	echo $fileName | tr ' ' '\n' | uniq | sort
+elif [ $# -le 2 ] && [ "$1" = "-m" ]; then
+	if [ -n "$2" ];	 then
+		fullPath=`readlink -f "$2"`
+	else
+		fullPath=`readlink -f ./`
+	fi	
+	
+	file=`grep "$fullPath/[^/]*$" "$WEDI_RC" | cut -d '|' -f1 | sort | uniq -c | sort |tail -n 1 | rev | cut -d ' ' -f1 | rev`
+	
+	if [ -n "$file" ]; then
+		edit $EDITOR "$file"
+	else
+		echo "ERROR: V danom subore nebol doposial editovany ziadny subor!" >&2	
+		exit 42
+	fi	
+	
+elif [ $# -le 3 ] && [ "$1" = "-a" -o "$1" = "-b" ]; then	
+	if [ -n "$3" ]; then
+		fullPath=`readlink -f "$3"`
+	else
+		fullPath=`readlink -f ./`
+	fi
+	if [ ! -d $3 ]; then
+		echo "ERROR: Zadali ste treti argument subor a nie adresar!" >&2		
+		exit 42
+	fi	
+	parameter=$1;
+	parameterDate=$2;
+	dates=`cat "$WEDI_RC" | cut -f2 -d '|'  | awk -F"/" 'NF{ print $NF }' | cut -f1 -d '_' | sort | uniq`
+	goodDates=""
+
+	for date in $dates
+	do
+		case $parameter in
+		"-b")
+               	if [[ "$date" < "$parameterDate" ]]; then
+					goodDates+="$date|"
+				fi
+        	;;            
+		"-a")
+                if [[ "$date" > "$parameterDate" ]]; then
+					goodDates+="$date|"
+				fi
+                ;;
+		  *)
+				echo "ERROR: Bol zadany neplatny prepinac!" >&2	
+				exit 42
+				;;
+		esac
+	done
+
+	toPrint=`grep "$fullPath/[^/]*$" "$WEDI_RC" | egrep  "$goodDates | {$goodDates::-1}" | cut -f1 -d '|'  | awk -F"/" 'NF{ print $NF }'` 
+	echo $toPrint | tr ' ' '\n' | sort | uniq
+
+elif [ $# -gt 3 ]; then
+	echo "ERROR: Prilis vela argumentov!">&2
+	exit 42
+else
+	echo "ERROR: Spustenie scriptu neodpoveda formatu!">&2
+	exit 42
+fi
